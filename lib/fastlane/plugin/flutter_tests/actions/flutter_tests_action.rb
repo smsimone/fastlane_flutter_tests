@@ -35,9 +35,9 @@ module Fastlane
           @test_id
         end
 
-        def _generate_message(print_errors)
+        def _generate_message
           default_message = "[#{@test_successful}] #{@test_name}"
-          if print_errors && (@test_successful != 'success')
+          if @test_successful != 'success'
             default_message += "\n[ERROR] -> #{@test_error}\n[STACKTRACE]\n#{@test_stacktrace}"
           end
 
@@ -50,8 +50,8 @@ module Fastlane
           end
         end
 
-        def print(print_errors)
-          UI.message(_generate_message(print_errors))
+        def print
+          UI.message(_generate_message)
         end
       end
 
@@ -62,16 +62,16 @@ module Fastlane
 
         # Launches all the unit tests contained in the project
         # folder
-        def run(flutter_command, print_errors)
+        def run(flutter_command, print_only_failed)
           Open3.popen3("#{flutter_command} test --machine") do |stdin, stdout, stderr, thread|
             stdout.each_line do |line|
-              parse_json_output(line, print_errors)
+              parse_json_output(line, print_only_failed)
             end
           end
         end
 
         # Parses the json output given by [self.run]
-        def parse_json_output(line, print_errors)
+        def parse_json_output(line, print_only_failed)
           unless line.to_s.strip.empty?
             output = JSON.parse(line)
             unless output.kind_of?(Array)
@@ -92,7 +92,9 @@ module Fastlane
                 unless test_item.nil?
                   @launched_tests.delete(test_id)
                   test_item.mark_as_done(output['result'], nil, nil)
-                  test_item.print(print_errors)
+                  unless print_only_failed
+                    test_item.print
+                  end
                 end
               when 'error'
                 test_id = output['testID']
@@ -100,7 +102,7 @@ module Fastlane
                 unless test_item.nil?
                   @launched_tests.delete(test_id)
                   test_item.mark_as_done('error', output['error'], output['stackTrace'])
-                  test_item.print(print_errors)
+                  test_item.print
                 end
               else
                 # ignored
@@ -115,7 +117,7 @@ module Fastlane
       end
 
       def self.run(params)
-        TestRunner.new.run(params[:flutter_command], params[:print_errors])
+        TestRunner.new.run(params[:flutter_command], params[:print_only_failed])
       end
 
       def self.description
@@ -145,9 +147,9 @@ module Fastlane
             type: String
           ),
           FastlaneCore::ConfigItem.new(
-            key: :print_errors,
+            key: :print_only_failed,
             default_value: true,
-            description: 'Specifies if it should print the error of failed tests',
+            description: 'Specifies if it should only print the tests that failed',
             optional: false,
             type: Boolean
           )
