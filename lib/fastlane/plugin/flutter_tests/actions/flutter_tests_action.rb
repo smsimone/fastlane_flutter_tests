@@ -41,7 +41,7 @@ module Fastlane
             default_message += "\n[ERROR] -> #{@test_error}\n[STACKTRACE]\n#{@test_stacktrace}"
           end
 
-          if %w[success error].include? @test_successful
+          if %w[success error].include?(@test_successful)
             color = @test_successful == 'success' ? 32 : 31
 
             "\e[#{color}m#{default_message}\e[0m"
@@ -51,7 +51,7 @@ module Fastlane
         end
 
         def print(print_errors)
-          UI.message _generate_message(print_errors)
+          UI.message(_generate_message(print_errors))
         end
       end
 
@@ -72,46 +72,45 @@ module Fastlane
 
         # Parses the json output given by [self.run]
         def parse_json_output(line, print_errors)
-          begin
-            unless line.to_s.strip.empty?
-              output = JSON.parse(line)
-              unless output.is_a? Array
-                type = output['type']
-                case type
-                when 'testStart'
-                  id = output['test']['id']
-                  name = output['test']['name']
-                  if name.include? 'loading'
-                    return
-                  end
-                  test_item = Test.new(id, name)
-                  @launched_tests[test_item.get_id] = test_item
-                when 'testDone'
-                  test_id = output['testID']
-                  test_item = @launched_tests[test_id]
-                  unless test_item.nil?
-                    @launched_tests.delete(test_id)
-                    test_item.mark_as_done(output['result'], nil, nil)
-                    test_item.print(print_errors)
-                  end
-                when 'error'
-                  test_id = output['testID']
-                  test_item = @launched_tests[test_id]
-                  unless test_item.nil?
-                    @launched_tests.delete(test_id)
-                    test_item.mark_as_done('error', output['error'], output['stackTrace'])
-                    test_item.print(print_errors)
-                  end
-                else
-                  # ignored
+          unless line.to_s.strip.empty?
+            output = JSON.parse(line)
+            unless output.kind_of?(Array)
+              type = output['type']
+              case type
+              when 'testStart'
+                id = output['test']['id']
+                name = output['test']['name']
+                if name.include?('loading')
+                  return
                 end
+
+                test_item = Test.new(id, name)
+                @launched_tests[test_item.get_id] = test_item
+              when 'testDone'
+                test_id = output['testID']
+                test_item = @launched_tests[test_id]
+                unless test_item.nil?
+                  @launched_tests.delete(test_id)
+                  test_item.mark_as_done(output['result'], nil, nil)
+                  test_item.print(print_errors)
+                end
+              when 'error'
+                test_id = output['testID']
+                test_item = @launched_tests[test_id]
+                unless test_item.nil?
+                  @launched_tests.delete(test_id)
+                  test_item.mark_as_done('error', output['error'], output['stackTrace'])
+                  test_item.print(print_errors)
+                end
+              else
+                # ignored
               end
             end
-          rescue => error
-            UI.error("Got error during parse_json: #{error.message}")
-            UI.error(error.backtrace.join('\n'))
-            exit 1
           end
+        rescue StandardError => e
+          UI.error("Got error during parse_json: #{e.message}")
+          UI.error(e.backtrace.join('\n'))
+          exit(1)
         end
       end
 

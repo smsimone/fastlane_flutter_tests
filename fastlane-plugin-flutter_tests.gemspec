@@ -3,17 +3,17 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'fastlane/plugin/flutter_tests/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'fastlane-plugin-flutter_tests'
-  spec.version       = Fastlane::FlutterTests::VERSION
-  spec.author        = 'smaso'
-  spec.email         = 'smsimone65@gmail.com'
+  spec.name = 'fastlane-plugin-flutter_tests'
+  spec.version = Fastlane::FlutterTests::VERSION
+  spec.author = 'smaso'
+  spec.email = 'smsimone65@gmail.com'
 
-  spec.summary       = 'Extensions that helps to run flutter tests'
-  # spec.homepage      = "https://github.com/<GITHUB_USERNAME>/fastlane-plugin-flutter_tests"
-  spec.license       = "MIT"
+  spec.summary = 'Extensions that helps to run flutter tests'
+  spec.homepage = "https://github.com/smsimone/fastlane_flutter_tests.git"
+  spec.license = "MIT"
 
-  spec.files         = Dir["lib/**/*"] + %w(README.md LICENSE)
-  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
+  spec.files = Dir["lib/**/*"] + %w(README.md LICENSE)
+  spec.test_files = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ['lib']
 
   spec.required_ruby_version = '>= 2.5'
@@ -33,4 +33,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency('rubocop-performance')
   spec.add_development_dependency('rubocop-require_tools')
   spec.add_development_dependency('simplecov')
+  spec.metadata['rubygems_mfa_required'] = 'true'
 end
