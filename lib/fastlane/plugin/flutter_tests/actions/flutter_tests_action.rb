@@ -37,7 +37,7 @@ module Fastlane
 
         def _generate_message(print_errors)
           default_message = "[#{@test_successful}] #{@test_name}"
-          if print_errors and @test_successful != 'success'
+          if print_errors && (@test_successful != 'success')
             default_message += "\n[ERROR] -> #{@test_error}\n[STACKTRACE]\n#{@test_stacktrace}"
           end
 
