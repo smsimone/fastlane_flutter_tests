@@ -15,11 +15,13 @@ module Fastlane
           @test_successful = ''
           @test_error = nil
           @test_stacktrace = nil
+          @test_was_skipped = false
         end
 
-        def mark_as_done(success, error, stacktrace)
+        def mark_as_done(success, skipped, error, stacktrace)
           @test_done = true
           @test_successful = success
+          @test_was_skipped = skipped
           @test_error = error
           unless stacktrace.nil?
             stacktrace = stacktrace.gsub(/ {2,}/, "\n")
@@ -36,13 +38,21 @@ module Fastlane
         end
 
         def _generate_message
-          default_message = "[#{@test_successful}] #{@test_name}"
+
+          tag = @test_was_skipped ? 'skipped' : @test_successful
+
+          default_message = "[#{tag}] #{@test_name}"
           if @test_successful != 'success'
             default_message += "\n[ERROR] -> #{@test_error}\n[STACKTRACE]\n#{@test_stacktrace}"
           end
 
-          if %w[success error].include?(@test_successful)
-            color = @test_successful == 'success' ? 32 : 31
+          if %w[success error].include?(@test_successful) || @test_was_skipped
+            color = if @test_was_skipped
+                      34 # Skipped tests are displayed in blue
+                    else
+                      # Successful tests are in green and the failed in red
+                      @test_successful == 'success' ? 32 : 31
+                    end
 
             "\e[#{color}m#{default_message}\e[0m"
           else
@@ -91,8 +101,9 @@ module Fastlane
                 test_item = @launched_tests[test_id]
                 unless test_item.nil?
                   @launched_tests.delete(test_id)
-                  test_item.mark_as_done(output['result'], nil, nil)
-                  unless print_only_failed
+                  was_skipped = output['skipped']
+                  test_item.mark_as_done(output['result'], was_skipped, nil, nil)
+                  if was_skipped || !print_only_failed
                     test_item.print
                   end
                 end
@@ -101,7 +112,7 @@ module Fastlane
                 test_item = @launched_tests[test_id]
                 unless test_item.nil?
                   @launched_tests.delete(test_id)
-                  test_item.mark_as_done('error', output['error'], output['stackTrace'])
+                  test_item.mark_as_done('error', false, output['error'], output['stackTrace'])
                   test_item.print
                 end
               else
@@ -149,7 +160,7 @@ module Fastlane
           FastlaneCore::ConfigItem.new(
             key: :print_only_failed,
             default_value: true,
-            description: 'Specifies if it should only print the tests that failed',
+            description: 'Specifies if it should only print the failed and the skipped tests',
             optional: false,
             type: Boolean
           )
