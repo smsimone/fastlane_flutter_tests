@@ -21,9 +21,9 @@ module Fastlane
       # @param test_folder [String] the path that contains the test files
       # @return [Array] An array containing all the paths to the files found
       def _load_files(test_folder)
-        test_files = Dir.glob("#{test_folder}/**/*").reject { |f|
+        test_files = Dir.glob("#{test_folder}/**/*").reject do |f|
           File.directory?(f) || !f.end_with?('_test.dart')
-        }
+        end
         UI.message("Found #{test_files.length} test files")
         test_files
       end
@@ -71,12 +71,12 @@ module Fastlane
         end
 
         count = 0
-        @integration_tests.each { |test|
+        @integration_tests.each do |test|
           UI.message("Launching test #{count}/#{@integration_tests.length}: #{test.split("/").last}")
           _, __, status = Open3.capture3("#{@flutter_command} drive --target #{@driver} --driver #{test} -d #{device_id} #{reuse_build ? "--use-application-binary #{apk_path}" : ''}")
           UI.message("Test #{count} ended with code '#{_get_exit_code(status)}'")
           count += 1
-        }
+        end
       end
 
       # Returns the exit code of a process
@@ -94,7 +94,7 @@ module Fastlane
       def _get_apk_path(message)
         components = message.split(/\n/).last.split(' ')
         if components.any? { |line| line.end_with? '.apk' }
-          components.filter { |c| c.end_with? '.apk' }.first
+          components.detect { |c| c.end_with? '.apk' }
         else
           UI.warn('Apk path not found in the stdout')
           nil
