@@ -1,5 +1,6 @@
 require 'fastlane/action'
 require 'open3'
+require_relative '../utils/utilities.rb'
 
 module Fastlane
   module Helper
@@ -33,6 +34,7 @@ module Fastlane
       # @param platform [String] Specifies on which platform the tests should be run
       # @param force_launch [Boolean] If it's true and there aren't any devices ready, the plugin will try to start one for the given platform
       # @param reuse_build [Boolean] If it's true, it will run the build only for the first integration test
+      # @return [Integer] Value 0 or 1 if all tests were run correctly or not
       def run(platform, force_launch, reuse_build)
         UI.message("Checking for running devices")
         device_id = _run_test_device(platform, force_launch)
@@ -48,6 +50,7 @@ module Fastlane
       #
       # @param device_id [String] the id of the device previously found
       # @param reuse_build [Boolean] If it's true, it will run the build only for the first integration test
+      # @return [Integer] Value 0 or 1 if all tests were run correctly or not
       def _launch_tests(device_id, reuse_build)
         apk_path = nil
         if reuse_build
@@ -71,12 +74,30 @@ module Fastlane
         end
 
         count = 0
+
+        tests = {
+          "successful" => 0,
+          "failed" => 0,
+        }
+
         @integration_tests.each do |test|
           UI.message("Launching test #{count}/#{@integration_tests.length}: #{test.split("/").last}")
           _, __, status = Open3.capture3("#{@flutter_command} drive --target #{@driver} --driver #{test} -d #{device_id} #{reuse_build ? "--use-application-binary #{apk_path}" : ''}")
-          UI.message("Test #{count} ended with code '#{_get_exit_code(status)}'")
+          successful = _get_exit_code(status) == '0'
+          color = successful ? 'green' : 'red'
+          tests[successful ? 'successful' : 'failed'] += 1
+
+          UI.message(Utilities.new.colorize("Test #{test.split("/").last} #{successful ? 'terminated correctly' : 'failed'}", color))
           count += 1
         end
+
+        if tests['failed'] != 0
+          UI.error("Some integration tests failed")
+          1
+        else
+          0
+        end
+
       end
 
       # Returns the exit code of a process
