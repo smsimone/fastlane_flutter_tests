@@ -32,11 +32,12 @@ module Fastlane
       #
       # @param platform [String] Specifies on which platform the tests should be run
       # @param force_launch [Boolean] If it's true and there aren't any devices ready, the plugin will try to start one for the given platform
-      def run(platform, force_launch)
+      # @param reuse_build [Boolean] If it's true, it will run the build only for the first integration test
+      def run(platform, force_launch, reuse_build)
         UI.message("Checking for running devices")
         device_id = _run_test_device(platform, force_launch)
         if !device_id.nil?
-          _launch_tests(device_id)
+          _launch_tests(device_id, reuse_build)
         else
           UI.error("Failed to find a device to launch the tests on")
           exit(1)
@@ -46,12 +47,58 @@ module Fastlane
       # Executes the tests found on the device_id
       #
       # @param device_id [String] the id of the device previously found
-      def _launch_tests(device_id)
+      # @param reuse_build [Boolean] If it's true, it will run the build only for the first integration test
+      def _launch_tests(device_id, reuse_build)
+        apk_path = nil
+        if reuse_build
+          UI.message("Building apk")
+          out, err, status = Open3.capture3("#{@flutter_command} build apk")
+          if _get_exit_code(status) != '0'
+            UI.error("Failed to build apk")
+            puts err
+            exit(1)
+          else
+            apk_path = _get_apk_path(out)
+            if !apk_path.nil? && File.file?(apk_path)
+              UI.message("Build apk at path #{apk_path}")
+              #TODO
+            else
+              UI.error("Apk path not found or it's not accessible")
+              exit(1)
+            end
+
+          end
+        end
+
+        count = 0
         @integration_tests.each { |test|
-          UI.message("Launching test #{test}")
-          _, __, status = Open3.capture3("#{@flutter_command} drive --target #{@driver} --driver #{test} -d #{device_id}")
-          UI.message("Test #{test} ended with code #{status}")
+          UI.message("Launching test #{count}/#{@integration_tests.length}: #{test.split("/").last}")
+          _, __, status = Open3.capture3("#{@flutter_command} drive --target #{@driver} --driver #{test} -d #{device_id} #{reuse_build ? "--use-application-binary #{apk_path}" : ''}")
+          UI.message("Test #{count} ended with code '#{_get_exit_code(status)}'")
+          count += 1
         }
+      end
+
+      # Returns the exit code of a process
+      #
+      # @param exit_status [String] status given back by [Open3]
+      # @return The exit code (0|1) as string
+      def _get_exit_code(exit_status)
+        exit_status.to_s.split(' ').last
+      end
+
+      # Parse the flutter build output looking for a .apk path
+      #
+      # @param message [String] the stdout of flutter build process
+      # @return the path to the apk that has been built
+      def _get_apk_path(message)
+        components = message.split(/\n/).last.split(' ')
+        if components.any? { |line| line.end_with? '.apk' }
+          components.filter { |c| c.end_with? '.apk' }.first
+        else
+          UI.warn('Apk path not found in the stdout')
+          nil
+        end
       end
 
       # Checks if there's a device running and gets its id

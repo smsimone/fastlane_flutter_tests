@@ -20,7 +20,14 @@ module Fastlane
             exit(1)
           end
 
-          Helper::FlutterIntegrationTestHelper.new(params[:driver_path], params[:integration_tests], params[:flutter_command]).run(params[:platform], params[:force_launch])
+          platform = params[:platform]
+
+          if params[:reuse_build] && platform != 'android'
+            UI.error("If 'reuse_build' is set to true, the platform must be android")
+            platform = 'android'
+          end
+
+          Helper::FlutterIntegrationTestHelper.new(params[:driver_path], params[:integration_tests], params[:flutter_command]).run(platform, params[:force_launch], params[:reuse_build])
         end
       end
 
@@ -108,6 +115,13 @@ module Fastlane
             type: Boolean,
             default_value: true,
           ),
+          FastlaneCore::ConfigItem.new(
+            key: :reuse_build,
+            description: "If true, builds the app only for the first time then the other integration tests are run on the same build (much faster)",
+            default_value: false,
+            optional: false,
+            type: Boolean,
+          )
         ]
       end
 
