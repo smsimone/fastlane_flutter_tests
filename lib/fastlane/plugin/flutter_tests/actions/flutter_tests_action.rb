@@ -102,11 +102,11 @@ module Fastlane
 
           if print_stats
             stats = Hash.new { |hash, key| hash[key] = 0 }
-            @launched_tests.values.each { |item|
+            @launched_tests.values.each do |item|
               unless item.nil?
                 stats[item.get_status] += 1
               end
-            }
+            end
 
             skipped_tests = stats['skipped'].nil? ? 0 : stats['skipped']
             failed_tests = stats['error'].nil? ? 0 : stats['error']
@@ -119,11 +119,11 @@ module Fastlane
             messages = ["Ran #{@launched_tests.values.filter { |e| !e.nil? }.length} tests"]
             colors = { 0 => 32, 1 => 31, 2 => 34 }
             max_length = 0
-            (0..2).each { |i|
+            (0..2).each do |i|
               msg = "#{table[0][i]}:\t#{table[1][i]}"
               max_length = [max_length, msg.length].max
               messages.append(_colorize(msg, colors[i]))
-            }
+            end
 
             UI.message('-' * max_length)
             messages.each { |m| UI.message(m) }
