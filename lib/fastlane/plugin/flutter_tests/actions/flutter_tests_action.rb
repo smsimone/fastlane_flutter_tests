@@ -16,6 +16,7 @@ module Fastlane
           @test_error = nil
           @test_stacktrace = nil
           @test_was_skipped = false
+          @test_was_printed = false
         end
 
         def mark_as_done(success, skipped, error, stacktrace)
@@ -37,8 +38,19 @@ module Fastlane
           @test_id
         end
 
-        def _generate_message
+        def can_print
+          !@test_was_printed
+        end
 
+        def get_status
+          if @test_was_skipped
+            'skipped'
+          else
+            @test_successful
+          end
+        end
+
+        def _generate_message
           tag = @test_was_skipped ? 'skipped' : @test_successful
 
           default_message = "[#{tag}] #{@test_name}"
@@ -62,6 +74,7 @@ module Fastlane
 
         def print
           UI.message(_generate_message)
+          @test_was_printed = true
         end
       end
 
@@ -70,13 +83,51 @@ module Fastlane
           @launched_tests = Hash.new { |hash, key| hash[key] = nil }
         end
 
+        # Wraps the message to color it
+        #
+        # @param message [String] the message that has to be wrapped
+        # @param color [Integer] the color of the message (34 -> blue, 32 -> green, 31 -> red)
+        def _colorize(message, color)
+          "\e[#{color}m#{message}\e[0m"
+        end
+
         # Launches all the unit tests contained in the project
         # folder
-        def run(flutter_command, print_only_failed)
+        def run(flutter_command, print_only_failed, print_stats)
           Open3.popen3("#{flutter_command} test --machine") do |stdin, stdout, stderr, thread|
             stdout.each_line do |line|
               parse_json_output(line, print_only_failed)
             end
+          end
+
+          if print_stats
+            stats = Hash.new { |hash, key| hash[key] = 0 }
+            @launched_tests.values.each { |item|
+              unless item.nil?
+                stats[item.get_status] += 1
+              end
+            }
+
+            skipped_tests = stats['skipped'].nil? ? 0 : stats['skipped']
+            failed_tests = stats['error'].nil? ? 0 : stats['error']
+            successful_tests = stats['success'].nil? ? 0 : stats['success']
+            table = [
+              %w[Successful Failed Skipped],
+              [successful_tests, failed_tests, skipped_tests]
+            ]
+
+            messages = ["Ran #{@launched_tests.values.filter { |e| !e.nil? }.length} tests"]
+            colors = { 0 => 32, 1 => 31, 2 => 34 }
+            max_length = 0
+            (0..2).each { |i|
+              msg = "#{table[0][i]}:\t#{table[1][i]}"
+              max_length = [max_length, msg.length].max
+              messages.append(_colorize(msg, colors[i]))
+            }
+
+            UI.message('-' * max_length)
+            messages.each { |m| UI.message(m) }
+            UI.message('-' * max_length)
           end
         end
 
@@ -99,8 +150,7 @@ module Fastlane
               when 'testDone'
                 test_id = output['testID']
                 test_item = @launched_tests[test_id]
-                unless test_item.nil?
-                  @launched_tests.delete(test_id)
+                if !test_item.nil? && test_item.can_print
                   was_skipped = output['skipped']
                   test_item.mark_as_done(output['result'], was_skipped, nil, nil)
                   if was_skipped || !print_only_failed
@@ -110,8 +160,7 @@ module Fastlane
               when 'error'
                 test_id = output['testID']
                 test_item = @launched_tests[test_id]
-                unless test_item.nil?
-                  @launched_tests.delete(test_id)
+                if !test_item.nil? && test_item.can_print
                   test_item.mark_as_done('error', false, output['error'], output['stackTrace'])
                   test_item.print
                 end
@@ -128,7 +177,7 @@ module Fastlane
       end
 
       def self.run(params)
-        TestRunner.new.run(params[:flutter_command], params[:print_only_failed])
+        TestRunner.new.run(params[:flutter_command], params[:print_only_failed], params[:print_stats])
       end
 
       def self.description
@@ -163,7 +212,14 @@ module Fastlane
             description: 'Specifies if it should only print the failed and the skipped tests',
             optional: false,
             type: Boolean
-          )
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :print_stats,
+            default_value: true,
+            description: 'If defined, it will print how many tests were done/skipped/failed',
+            optional: false,
+            type: Boolean
+          ),
         ]
       end
 
