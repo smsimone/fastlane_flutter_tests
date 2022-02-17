@@ -1,4 +1,5 @@
 require 'fastlane/action'
+require_relative '../utils/utilities'
 
 module Fastlane
 
@@ -6,16 +7,6 @@ module Fastlane
     class FlutterUnitTestHelper
       def initialize
         @launched_tests = Hash.new { |hash, key| hash[key] = nil }
-      end
-
-      # Wraps the message to color it
-      #
-      # @param message [String] the message that has to be wrapped
-      # @param color [Integer] the color of the message (34 -> blue, 32 -> green, 31 -> red)
-      #
-      # @return [String] the colorized message ready to be printed
-      def _colorize(message, color)
-        "\e[#{color}m#{message}\e[0m"
       end
 
       # Launches all the unit tests contained in the project
@@ -49,12 +40,12 @@ module Fastlane
           ]
 
           messages = ["Ran #{@launched_tests.values.count { |e| !e.nil? }} tests"]
-          colors = { 0 => 32, 1 => 31, 2 => 34 }
+          colors = { 0 => 'green', 1 => 'red', 2 => 'blue' }
           max_length = 0
           (0..2).each do |i|
             msg = "#{table[0][i]}:\t#{table[1][i]}"
             max_length = [max_length, msg.length].max
-            messages.append(_colorize(msg, colors[i]))
+            messages.append(Utilities.new.colorize(msg, colors[i]))
           end
 
           UI.message('-' * max_length)
