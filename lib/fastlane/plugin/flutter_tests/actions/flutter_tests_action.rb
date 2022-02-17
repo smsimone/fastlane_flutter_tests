@@ -116,7 +116,7 @@ module Fastlane
               [successful_tests, failed_tests, skipped_tests]
             ]
 
-            messages = ["Ran #{@launched_tests.values.filter { |e| !e.nil? }.length} tests"]
+            messages = ["Ran #{@launched_tests.values.count { |e| !e.nil? }} tests"]
             colors = { 0 => 32, 1 => 31, 2 => 34 }
             max_length = 0
             (0..2).each { |i|

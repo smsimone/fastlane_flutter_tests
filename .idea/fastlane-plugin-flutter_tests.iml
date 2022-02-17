@@ -110,7 +110,6 @@
     <orderEntry type="library" scope="PROVIDED" name="simplecov (v0.21.2, rbenv: 3.0.1) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="simplecov-html (v0.12.3, rbenv: 3.0.1) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="simplecov_json_formatter (v0.1.4, rbenv: 3.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="table_print (v1.5.7, rbenv: 3.0.1) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="terminal-notifier (v2.0.0, rbenv: 3.0.1) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="terminal-table (v1.6.0, rbenv: 3.0.1) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="trailblazer-option (v0.1.2, rbenv: 3.0.1) [gem]" level="application" />
