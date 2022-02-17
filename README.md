@@ -1,6 +1,7 @@
 # flutter_tests plugin
 
 [![fastlane Plugin Badge](https://rawcdn.githack.com/fastlane/fastlane/master/fastlane/assets/plugin-badge.svg)](https://rubygems.org/gems/fastlane-plugin-flutter_tests)
+[![Gem Version](https://badge.fury.io/rb/fastlane-plugin-flutter_tests.svg)](https://badge.fury.io/rb/fastlane-plugin-flutter_tests)
 
 ## Getting Started
 
