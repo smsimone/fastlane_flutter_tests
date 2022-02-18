@@ -10,10 +10,10 @@ module Fastlane
     class FlutterTestsAction < Action
       def self.run(params)
         test_type = params[:test_type]
-        if %w[all unit].include? test_type
-          Helper::FlutterUnitTestHelper.new.run(params[:flutter_command], params[:print_only_failed], params[:print_stats])
-        end
-        if %w[all integration].include? test_type
+        case test_type
+        when 'unit'
+          return Helper::FlutterUnitTestHelper.new.run(params[:flutter_command], params[:print_only_failed], params[:print_stats])
+        when 'integration'
 
           if params[:driver_path].nil? || params[:integration_tests].nil?
             UI.user_error!("If launching integration tests, 'driver_path' and 'integration_tests' parameters must be inserted")
@@ -27,7 +27,10 @@ module Fastlane
             platform = 'android'
           end
 
-          Helper::FlutterIntegrationTestHelper.new(params[:driver_path], params[:integration_tests], params[:flutter_command]).run(platform, params[:force_launch], params[:reuse_build])
+          return Helper::FlutterIntegrationTestHelper.new(params[:driver_path], params[:integration_tests], params[:flutter_command]).run(platform, params[:force_launch], params[:reuse_build])
+        else
+          UI.error("Test type #{test_type} is unsupported")
+          exit(1)
         end
       end
 
@@ -73,10 +76,9 @@ module Fastlane
           ),
           FastlaneCore::ConfigItem.new(
             key: :test_type,
-            default_value: 'all',
             description: "Specifies which tests should be run. Accepted values",
             verify_block: proc do |value|
-              UI.user_error!("Wrong value, #{value} not accepted. Should be 'unit','integration' or 'all'.") unless %w[unit integration all].include? value
+              UI.user_error!("Wrong value, #{value} not accepted. Should be 'unit' or 'integration'.") unless %w[unit integration].include? value
             end,
             optional: false,
             type: String,

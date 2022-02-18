@@ -91,11 +91,8 @@ module Fastlane
           count += 1
         end
 
-        if tests['failed'] != 0
-          UI.error("Some integration tests failed")
-          1
-        else
-          0
+        unless tests['failed'] == 0
+          UI.user_error!("There are some integration tests that fail")
         end
 
       end
@@ -125,10 +122,12 @@ module Fastlane
       # Checks if there's a device running and gets its id
       # @param platform [String] Specifies the type of device that should be found
       # @param force_launch [Boolean] If it's true and there aren't any devices ready, the plugin will try to start one for the given platform
+      # @param custom_uuid [String] Optional, if defined it will try to launch a specific ios emulator, otherwise it will pick a random emulator for the given platform (only if there isn't any other emulator already running)
       # @return The deviceId if the device exists or [nil]
       def _run_test_device(platform, force_launch)
         out, _ = Open3.capture2("#{@flutter_command} devices | grep #{platform}")
         device_id = nil
+
         if out.to_s.strip.empty? && force_launch
           out, _ = Open3.capture2("#{@flutter_command} emulators | grep #{platform}")
           if out.to_s.strip.empty?
@@ -139,7 +138,10 @@ module Fastlane
           emulator_id = out.to_s.split('•')[0]
           Open3.capture2("#{@flutter_command} emulators --launch #{emulator_id}")
 
+          _await_ios_device
+
           out, _ = Open3.capture2("#{@flutter_command} devices | grep #{platform}")
+
         else
           device_id = (out.to_s.split("•")[1]).strip
           UI.message("Found already running device: #{device_id}")
@@ -152,6 +154,18 @@ module Fastlane
 
         device_id.nil? ? nil : device_id
       end
+
+      # Awaits for a new ios emulator to be ready
+      #
+      # @param device_id [String] the id of the simulator
+      def _await_ios_device
+
+        result = nil
+        while result.nil?
+          out, status = Open3.capture2("xcrun simctl spawn #{device_id} launchctl print system | grep com.apple.springboard.services")
+        end
+      end
+
     end
   end
 end
