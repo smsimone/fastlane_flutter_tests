@@ -138,7 +138,8 @@ module Fastlane
           emulator_id = out.to_s.split('•')[0]
           Open3.capture2("#{@flutter_command} emulators --launch #{emulator_id}")
 
-          _await_ios_device
+          #TODO
+          #_await_ios_device
 
           out, _ = Open3.capture2("#{@flutter_command} devices | grep #{platform}")
 
@@ -158,8 +159,7 @@ module Fastlane
       # Awaits for a new ios emulator to be ready
       #
       # @param device_id [String] the id of the simulator
-      def _await_ios_device
-
+      def _await_ios_device(device_id)
         result = nil
         while result.nil?
           out, status = Open3.capture2("xcrun simctl spawn #{device_id} launchctl print system | grep com.apple.springboard.services")
