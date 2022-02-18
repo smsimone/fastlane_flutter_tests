@@ -91,13 +91,9 @@ module Fastlane
           count += 1
         end
 
-        if tests['failed'] != 0
-          UI.error("Some integration tests failed")
-          1
-        else
-          0
+        unless tests['failed'] == 0
+          UI.user_error!("There are some integration tests that fail")
         end
-
       end
 
       # Returns the exit code of a process

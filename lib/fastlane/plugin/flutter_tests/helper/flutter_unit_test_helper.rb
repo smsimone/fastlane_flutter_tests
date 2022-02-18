@@ -51,6 +51,10 @@ module Fastlane
           UI.message('-' * max_length)
           messages.each { |m| UI.message(m) }
           UI.message('-' * max_length)
+
+          unless failed_tests == 0
+            UI.user_error!("There are some unitTests that fail")
+          end
         end
       end
 
