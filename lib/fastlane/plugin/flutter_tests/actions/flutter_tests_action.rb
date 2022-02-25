@@ -11,7 +11,7 @@ module Fastlane
       def self.run(params)
         test_type = params[:test_type]
         if %w[all unit].include? test_type
-          Helper::FlutterUnitTestHelper.new.run(params[:flutter_command], params[:print_only_failed], params[:print_stats])
+          Helper::FlutterUnitTestHelper.new.run(params[:flutter_command], params[:print_only_failed], params[:print_stats], params[:fail_on_error])
         end
         if %w[all integration].include? test_type
 
@@ -27,7 +27,7 @@ module Fastlane
             platform = 'android'
           end
 
-          Helper::FlutterIntegrationTestHelper.new(params[:driver_path], params[:integration_tests], params[:flutter_command]).run(platform, params[:force_launch], params[:reuse_build])
+          Helper::FlutterIntegrationTestHelper.new(params[:driver_path], params[:integration_tests], params[:flutter_command], params[:log_path]).run(platform, params[:force_launch], params[:reuse_build], params[:fail_on_error])
         end
       end
 
@@ -119,6 +119,22 @@ module Fastlane
             key: :reuse_build,
             description: "If true, builds the app only for the first time then the other integration tests are run on the same build (much faster)",
             default_value: false,
+            optional: false,
+            type: Boolean,
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :log_path,
+            description: "If specified, it indicates where the logs of the failed tests will be located. Used only with integration tests",
+            optional: true,
+            type: String,
+            verify_block: proc do |value|
+              UI.user_error!("Directory doesn't exists or is not a folder") unless File.exists?(value) && File.directory?(value)
+            end
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :fail_on_error,
+            description: "Specifies if the lane fails if there are some failed tests",
+            default_value: true,
             optional: false,
             type: Boolean,
           )

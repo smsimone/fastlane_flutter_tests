@@ -15,8 +15,9 @@ module Fastlane
       # @param flutter_command [String] Contains the command to launch flutter
       # @param print_only_failed [Boolean] If true, prints only skipped and failed tests
       # @param print_stats [Boolean] If true, it prints a table containing the info about
+      # @param fail_on_error [Boolean] If true, the lane will fail if there are some failed tests
       # the launched tests
-      def run(flutter_command, print_only_failed, print_stats)
+      def run(flutter_command, print_only_failed, print_stats, fail_on_error)
         Open3.popen3("#{flutter_command} test --machine") do |stdin, stdout, stderr, thread|
           stdout.each_line do |line|
             parse_json_output(line, print_only_failed)
@@ -52,7 +53,7 @@ module Fastlane
           messages.each { |m| UI.message(m) }
           UI.message('-' * max_length)
 
-          unless failed_tests == 0
+          unless failed_tests == 0 && fail_on_error
             UI.user_error!("There are some unitTests that fail")
           end
         end

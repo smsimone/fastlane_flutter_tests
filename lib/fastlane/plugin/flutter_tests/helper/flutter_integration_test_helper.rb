@@ -1,6 +1,7 @@
 require 'fastlane/action'
 require 'open3'
 require_relative '../utils/utilities.rb'
+require_relative '../utils/log_helper.rb'
 
 module Fastlane
   module Helper
@@ -10,11 +11,13 @@ module Fastlane
       # @param driver [String] the path to the file that will be used as driver
       # @param test_folder [String] the path to the folder that contains the
       # @param flutter_command [String] the command to launch flutter
+      # @param log_path [String] The path where logs will be located
       # integration tests
-      def initialize(driver, test_folder, flutter_command)
+      def initialize(driver, test_folder, flutter_command, log_path)
         @driver = driver
         @integration_tests = _load_files(test_folder)
         @flutter_command = flutter_command
+        @log_path = log_path
       end
 
       # Loads all the integration test files
@@ -34,12 +37,13 @@ module Fastlane
       # @param platform [String] Specifies on which platform the tests should be run
       # @param force_launch [Boolean] If it's true and there aren't any devices ready, the plugin will try to start one for the given platform
       # @param reuse_build [Boolean] If it's true, it will run the build only for the first integration test
+      # @param fail_on_error [Boolean] If true, the lane will fail if there are some failed tests
       # @return [Integer] Value 0 or 1 if all tests were run correctly or not
-      def run(platform, force_launch, reuse_build)
+      def run(platform, force_launch, reuse_build, fail_on_error)
         UI.message("Checking for running devices")
         device_id = _run_test_device(platform, force_launch)
         if !device_id.nil?
-          _launch_tests(device_id, reuse_build)
+          _launch_tests(device_id, reuse_build, fail_on_error)
         else
           UI.error("Failed to find a device to launch the tests on")
           exit(1)
@@ -50,8 +54,9 @@ module Fastlane
       #
       # @param device_id [String] the id of the device previously found
       # @param reuse_build [Boolean] If it's true, it will run the build only for the first integration test
+      # @param fail_on_error [Boolean] If true, the lane will fail if there are some failed tests
       # @return [Integer] Value 0 or 1 if all tests were run correctly or not
-      def _launch_tests(device_id, reuse_build)
+      def _launch_tests(device_id, reuse_build, fail_on_error)
         apk_path = nil
         if reuse_build
           UI.message("Building apk")
@@ -69,7 +74,6 @@ module Fastlane
               UI.error("Apk path not found or it's not accessible")
               exit(1)
             end
-
           end
         end
 
@@ -81,9 +85,30 @@ module Fastlane
         }
 
         @integration_tests.each do |test|
-          UI.message("Launching test #{count}/#{@integration_tests.length}: #{test.split("/").last}")
-          _, __, status = Open3.capture3("#{@flutter_command} drive --target #{@driver} --driver #{test} -d #{device_id} #{reuse_build ? "--use-application-binary #{apk_path}" : ''}")
+          test_name = test.split("/").last
+          UI.message("Launching test #{count}/#{@integration_tests.length}: #{test_name}")
+          helper = LogHelper.new("#{@log_path}/#{test_name}.log")
+
+          status = "Status: -1"
+          Open3.popen2("#{@flutter_command} drive --target #{@driver} --driver #{test} -d #{device_id} #{reuse_build ? "--use-application-binary #{apk_path}" : ''}") do |_, stdout, thread|
+            stdout.each_line do |line|
+              helper.write_line(line)
+            end
+
+            status = thread.value
+          end
+
+          #_, __, status = Open3.capture3("#{@flutter_command} drive --target #{@driver} --driver #{test} -d #{device_id} #{reuse_build ? "--use-application-binary #{apk_path}" : ''}")
+
+          exit_code = _get_exit_code(status)
+          if exit_code == "-1"
+            UI.user_error!("Failed to fetch process status")
+          end
+
           successful = _get_exit_code(status) == '0'
+          if successful
+            helper.delete_file
+          end
           color = successful ? 'green' : 'red'
           tests[successful ? 'successful' : 'failed'] += 1
 
@@ -91,7 +116,7 @@ module Fastlane
           count += 1
         end
 
-        unless tests['failed'] == 0
+        unless tests['failed'] == 0 && fail_on_error
           UI.user_error!("There are some integration tests that fail")
         end
       end
